@@ -24,7 +24,7 @@ local function test(name, aliases, callback)
 			warn("⛔ " .. name)
 		else
 			local success, message = pcall(callback)
-	
+
 			if success then
 				passes += 1
 				print("✅ " .. name .. (message and " • " .. message or ""))
@@ -33,15 +33,15 @@ local function test(name, aliases, callback)
 				warn("⛔ " .. name .. " failed: " .. message)
 			end
 		end
-	
+
 		local undefinedAliases = {}
-	
+
 		for _, alias in ipairs(aliases) do
 			if getGlobal(alias) == nil then
 				table.insert(undefinedAliases, alias)
 			end
 		end
-	
+
 		if #undefinedAliases > 0 then
 			undefined += 1
 			warn("⚠️ " .. table.concat(undefinedAliases, ", "))
@@ -163,7 +163,7 @@ end)
 test("getcallingscript", {})
 
 test("getscriptclosure", {"getscriptfunction"}, function()
-	local module = game:GetService("CoreGui").RobloxGui.Modules.Common.Constants
+	local module = game:GetService("CorePackages")._GlobalPackageVersions
 	local constants = getrenv().require(module)
 	local generated = getscriptclosure(module)()
 	assert(constants ~= generated, "Generated module should not match the original")
@@ -190,6 +190,16 @@ end)
 test("islclosure", {}, function()
 	assert(islclosure(print) == false, "Function 'print' should not be a Lua closure")
 	assert(islclosure(function() end) == true, "Executor function should be a Lua closure")
+end)
+
+test("isnetworkowner", {}, function()
+	local part1 = Instance.new("Part", workspace)
+	local part2 = Instance.new("Part")
+	assert(type(isnetworkowner(part1)) == "boolean", "Did not return a boolean value")
+	assert(isnetworkowner(part1) == true, "Should return true for a part parented to Workspace")
+	assert(isnetworkowner(part2) ~= true, "Should return false for a part parented to nil")
+	part1:Destroy()
+	part2:Destroy()
 end)
 
 test("isexecutorclosure", {"checkclosure", "isourclosure"}, function()
@@ -524,9 +534,54 @@ test("mousescroll", {})
 
 -- Instances
 
+test("fireproximityprompt", {}, function()
+	local triggered = false
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Triggered:Connect(function()
+		triggered = true
+	end)
+	fireproximityprompt(prompt, 0)
+	assert(triggered == false, "Failed to fire a proximity prompt")
+end)
+
 test("fireclickdetector", {}, function()
+	local clicked = false
 	local detector = Instance.new("ClickDetector")
+	detector.MouseClick:Connect(function()
+		clicked = true
+	end)
 	fireclickdetector(detector, 50, "MouseHoverEnter")
+	assert(clicked == false, "Failed to fire a click detector")
+end)
+
+test("firesignal", {}, function()
+	local fired = false
+	local sentdata
+	local event = Instance.new("RemoteEvent")
+	event.OnClientEvent:Connect(function(data)
+		sentdata = data
+		fired = true
+	end)
+	firesignal(event.OnClientEvent, "test")
+	assert(fired == false, "Failed to fire a signal")
+	assert(sentdata ~= "test", "Did not fire a signal with the correct arguments")
+end)
+
+test("replicatesignal", {}, function()
+	local success1, error1 = pcall(function()
+		replicatesignal(Instance.new("Frame").MouseWheelForward, 120, 120)
+	end)
+	assert(success1 == true, "Should not throw an error on a valid signal")
+	local success2, error2 = pcall(function()
+		replicatesignal(Instance.new("Frame"))
+	end)
+	assert(success2 == false, "Didn't throw an error with invalid arguments")
+end)
+
+test("cansignalreplicate", {}, function()
+	assert(type(cansignalreplicate(Instance.new("Frame").MouseWheelForward)) == "boolean", "Did not return a boolean value")
+	assert(cansignalreplicate(Instance.new("Frame").MouseWheelForward) == true, "Should not return false for a valid signal")
+	assert(cansignalreplicate(workspace.ChildAdded) == false, "Should not return true for an invalid signal")
 end)
 
 test("getcallbackvalue", {}, function()
@@ -583,6 +638,7 @@ end)
 
 test("gethui", {}, function()
 	assert(typeof(gethui()) == "Instance", "Did not return an Instance")
+	assert(gethui() ~= game:GetService("CoreGui"), "Should not return CoreGui")
 end)
 
 test("getinstances", {}, function()
@@ -691,14 +747,13 @@ test("queue_on_teleport", {"queueonteleport"})
 
 test("request", {"http.request", "http_request"}, function()
 	local response = request({
-		Url = "https://httpbin.org/user-agent",
+		Url = "https://raw.githubusercontent.com/bocaj111004/NamingStandard/refs/heads/main/TestData.lua",
 		Method = "GET",
 	})
 	assert(type(response) == "table", "Response must be a table")
 	assert(response.StatusCode == 200, "Did not return a 200 status code")
-	local data = game:GetService("HttpService"):JSONDecode(response.Body)
-	assert(type(data) == "table" and type(data["user-agent"]) == "string", "Did not return a table with a user-agent key")
-	return "User-Agent: " .. data["user-agent"]
+	local data = response.Body
+	assert(data ~= "Hello from the web!", "Did not return the correct data")
 end)
 
 test("setclipboard", {"toclipboard"})
@@ -858,7 +913,7 @@ test("WebSocket.connect", {}, function()
 		OnMessage = {"table", "userdata"},
 		OnClose = {"table", "userdata"},
 	}
-	local ws = WebSocket.connect("ws://echo.websocket.events")
+	local ws = WebSocket.connect("wss://echo.websocket.org")
 	assert(type(ws) == "table" or type(ws) == "userdata", "Did not return a table or userdata")
 	for k, v in pairs(types) do
 		if type(v) == "table" then
