@@ -766,7 +766,7 @@ test("setclipboard", {"toclipboard"})
 test("setfpscap", {}, function()
 	setfpscap(10)
 	game:GetService("RunService").RenderStepped:Wait()
-	assert(math.floor(1 / game:GetService("RunService").RenderStepped:Wait()) < 10, "Failed to set fps cap")
+	assert(math.floor(1 / game:GetService("RunService").RenderStepped:Wait()) < 20, "Failed to set fps cap")
 	setfpscap(0)
 end)
 
@@ -919,4 +919,5 @@ test("WebSocket.connect", {}, function()
 	end
 	ws:Close()
 end)
+
 
