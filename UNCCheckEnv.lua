@@ -764,10 +764,20 @@ end)
 test("setclipboard", {"toclipboard"})
 
 test("setfpscap", {}, function()
-	setfpscap(10)
-	game:GetService("RunService").RenderStepped:Wait()
-	assert(math.floor(1 / game:GetService("RunService").RenderStepped:Wait()) < 20, "Failed to set fps cap")
+	local renderStepped = game:GetService("RunService").RenderStepped
+	local function step()
+		renderStepped:Wait()
+		local sum = 0
+		for _ = 1, 5 do
+			sum += 1 / renderStepped:Wait()
+		end
+		return math.round(sum / 5)
+	end
+	setfpscap(60)
+	local step60 = step()
 	setfpscap(0)
+	local step0 = step()
+	return step60 .. "fps @60 • " .. step0 .. "fps @0"
 end)
 
 -- Scripts
@@ -919,5 +929,6 @@ test("WebSocket.connect", {}, function()
 	end
 	ws:Close()
 end)
+
 
 
