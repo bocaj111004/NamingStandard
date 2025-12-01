@@ -576,6 +576,11 @@ test("replicatesignal", {}, function()
 		replicatesignal(Instance.new("Frame"))
 	end)
 	assert(success2 == false, "Didn't throw an error with invalid arguments")
+	local fired = false
+	Instance.new("Frame").MouseWheelForward:Connect(function()
+		fired = true
+	end)
+	assert(fired == false, "Failed to replicate a signal")
 end)
 
 test("cansignalreplicate", {}, function()
